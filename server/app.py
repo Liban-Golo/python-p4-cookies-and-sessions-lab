@@ -1,34 +1,48 @@
-#!/usr/bin/env python3
+# server/app.py
 
-from flask import Flask, make_response, jsonify, session
-from flask_migrate import Migrate
-
-from models import db, Article, User
+from flask import Flask, jsonify, session, make_response
+from flask_cors import CORS
 
 app = Flask(__name__)
-app.secret_key = b'Y\xf1Xz\x00\xad|eQ\x80t \xca\x1a\x10K'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.json.compact = False
+app.secret_key = "supersecretkey"  
+CORS(app)  
 
-migrate = Migrate(app, db)
 
-db.init_app(app)
+ARTICLES = [
+    {"id": 1, "title": "Article 1", "content": "This is the content of Article 1."},
+    {"id": 2, "title": "Article 2", "content": "This is the content of Article 2."},
+    {"id": 3, "title": "Article 3", "content": "This is the content of Article 3."},
+    {"id": 4, "title": "Article 4", "content": "This is the content of Article 4."},
+    {"id": 5, "title": "Article 5", "content": "This is the content of Article 5."},
+]
 
-@app.route('/clear')
-def clear_session():
-    session['page_views'] = 0
-    return {'message': '200: Successfully cleared session data.'}, 200
-
-@app.route('/articles')
-def index_articles():
-
-    pass
-
-@app.route('/articles/<int:id>')
+@app.route("/articles/<int:id>", methods=["GET"])
 def show_article(id):
+    
+    session['page_views'] = session.get('page_views') or 0
 
-    pass
+    
+    session['page_views'] += 1
 
-if __name__ == '__main__':
-    app.run(port=5555)
+    
+    if session['page_views'] > 3:
+        return make_response(
+            jsonify({"message": "Maximum pageview limit reached"}),
+            401
+        )
+
+    
+    article = next((a for a in ARTICLES if a["id"] == id), None)
+
+    if not article:
+        return make_response(jsonify({"message": "Article not found"}), 404)
+
+    return jsonify(article)
+
+@app.route("/clear", methods=["GET"])
+def clear_session():
+    session.clear()
+    return jsonify({"message": "Session cleared"})
+
+if __name__ == "__main__":
+    app.run(port=5555, debug=True)
